@@ -62,7 +62,7 @@ const OrdersManagement = () => {
     
     const config = statusConfig[status] || statusConfig.pending;
     return (
-      <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${config.color}`}>
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${config.color}`}>
         {config.label}
       </span>
     );
@@ -174,6 +174,9 @@ const OrdersManagement = () => {
                           المنتج
                         </th>
                         <th className="px-3 py-2 sm:px-4 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
+                          المقاس
+                        </th>
+                        <th className="px-3 py-2 sm:px-4 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
                           السعر
                         </th>
                         <th className="px-3 py-2 sm:px-4 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
@@ -194,7 +197,7 @@ const OrdersManagement = () => {
                                 alt={item.product.name}
                                 className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-lg ml-2 sm:ml-3 border border-gray-200 flex-shrink-0"
                                 onError={(e) => {
-                                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0AiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiNGM0Y0RjYiLz4KPHBhdGggZD0iTTE4IDE2TDIwIDE0TDE0IDhMMTIgMTBMMjAgMThMMjIgMTZMMjAgMTRMMjIgMTJMMjAgMTBMMTggMTJMMjAgMTRMMTggMTZaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPg==';
+                                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xOCAxNkwyMCAxNEwxNCA4TDEyIDEwTDIwIDE4TDIyIDE2TDIwIDE0TDIyIDEyTDIwIDEwTDE4IDEyTDIwIDE0TDE4IDE2WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4=';
                                 }}
                               />
                               <div className="text-right min-w-0 flex-1">
@@ -203,6 +206,11 @@ const OrdersManagement = () => {
                                 </div>
                               </div>
                             </div>
+                          </td>
+                          <td className="px-3 py-2 sm:px-4 sm:py-3">
+                            <span className="bg-pink-100 text-pink-800 px-2 py-1 rounded-lg text-xs font-bold">
+                              {item.selectedSize || 'غير محدد'}
+                            </span>
                           </td>
                           <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-gray-900 whitespace-nowrap">
                             {item.product.price} ج.م

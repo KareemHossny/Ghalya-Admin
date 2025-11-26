@@ -5,9 +5,7 @@ import { toast } from 'sonner';
 // دالة ذكية لضغط الصور تعمل على جميع الأجهزة
 const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
   return new Promise((resolve, reject) => {
-    // التحقق مما إذا كان المتصفح يدعم Canvas
     if (!window.HTMLCanvasElement) {
-      // إذا كان Canvas غير مدعوم، استخدم الصورة الأصلية
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target.result);
       reader.onerror = () => reject(new Error('فشل في قراءة الملف'));
@@ -24,7 +22,6 @@ const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
         let width = img.width;
         let height = img.height;
 
-        // حساب الأبعاد الجديدة مع الحفاظ على النسبة
         if (width > height) {
           if (width > maxWidth) {
             height = Math.round((height * maxWidth) / width);
@@ -40,15 +37,12 @@ const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
         canvas.width = width;
         canvas.height = height;
 
-        // تعبئة الخلفية باللون الأبيض للصور الشفافة
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, width, height);
         
-        // رسم الصورة
         ctx.drawImage(img, 0, 0, width, height);
 
-        // جودة أقل لتقليل الحجم
-        let quality = 0.6; // خفض الجودة
+        let quality = 0.6;
         
         if (file.size > 2 * 1024 * 1024) {
           quality = 0.5;
@@ -56,10 +50,7 @@ const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
           quality = 0.55;
         }
 
-        // استخدام JPEG لأفضل ضغط
         const format = 'image/jpeg';
-        
-        // تحويل إلى Base64
         const base64 = canvas.toDataURL(format, quality);
         resolve(base64);
       } catch (error) {
@@ -71,7 +62,6 @@ const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
       reject(new Error('فشل في تحميل الصورة'));
     };
 
-    // استخدام FileReader مباشرة
     const reader = new FileReader();
     reader.onload = (e) => {
       img.src = e.target.result;
@@ -89,9 +79,14 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     name: '',
     description: '',
     price: '',
-    stock: '',
     bestseller: false
   });
+  const [sizes, setSizes] = useState([
+    { size: 'S', quantity: 0 },
+    { size: 'M', quantity: 0 },
+    { size: 'L', quantity: 0 },
+    { size: 'XL', quantity: 0 }
+  ]);
   const [imagePreview, setImagePreview] = useState('');
   const [imageBase64, setImageBase64] = useState('');
   const [imageLoading, setImageLoading] = useState(false);
@@ -103,19 +98,35 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         name: editingProduct.name,
         description: editingProduct.description || '',
         price: editingProduct.price.toString(),
-        stock: editingProduct.stock.toString(),
         bestseller: editingProduct.bestseller || false
       });
       setImagePreview(editingProduct.image || '');
-      setImageBase64(''); // لا نحتاج لـ Base64 للمنتجات الحالية
+      setImageBase64('');
+      
+      // تحميل المقاسات الحالية
+      if (editingProduct.sizes && editingProduct.sizes.length > 0) {
+        setSizes(editingProduct.sizes);
+      } else {
+        setSizes([
+          { size: 'S', quantity: 0 },
+          { size: 'M', quantity: 0 },
+          { size: 'L', quantity: 0 },
+          { size: 'XL', quantity: 0 }
+        ]);
+      }
     } else {
       setFormData({
         name: '',
         description: '',
         price: '',
-        stock: '',
         bestseller: false
       });
+      setSizes([
+        { size: 'S', quantity: 0 },
+        { size: 'M', quantity: 0 },
+        { size: 'L', quantity: 0 },
+        { size: 'XL', quantity: 0 }
+      ]);
       setImagePreview('');
       setImageBase64('');
     }
@@ -129,18 +140,36 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     }));
   };
 
+  const handleSizeQuantityChange = (index, quantity) => {
+    const newSizes = [...sizes];
+    newSizes[index].quantity = parseInt(quantity) || 0;
+    setSizes(newSizes);
+  };
+
+  const handleSizeToggle = (size) => {
+    const newSizes = [...sizes];
+    const existingIndex = newSizes.findIndex(s => s.size === size);
+    
+    if (existingIndex >= 0) {
+      // إذا المقاس موجود، قم بإزالته
+      newSizes.splice(existingIndex, 1);
+    } else {
+      // إذا المقاس غير موجود، أضفه
+      newSizes.push({ size, quantity: 0 });
+    }
+    setSizes(newSizes);
+  };
+
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // التحقق من نوع الملف
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       toast.error('يجب اختيار ملف صورة فقط (JPEG, PNG, WebP)');
       return;
     }
 
-    // تحقق من الحجم (3MB كحد أقصى)
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 3MB');
@@ -150,16 +179,13 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     setImageLoading(true);
 
     try {
-      // معاينة فورية أولية
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
 
       console.log('🔄 جاري معالجة الصورة...');
       
-      // استخدام أبعاد أصغر للضغط
       const compressedBase64 = await compressImageUniversal(file, 500, 500);
       
-      // تنظيف معاينة URL المؤقتة
       URL.revokeObjectURL(previewUrl);
       
       setImagePreview(compressedBase64);
@@ -169,7 +195,6 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       console.log(`📊 حجم الصورة بعد الضغط: ${compressedSize}KB`);
       
       if (compressedSize > 300) {
-        // إذا كانت الصورة لا تزال كبيرة، حاول بضغط أقوى
         toast.warning('جاري ضغط الصورة أكثر...');
         const moreCompressed = await compressImageUniversal(file, 400, 400);
         setImagePreview(moreCompressed);
@@ -183,7 +208,6 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     } catch (error) {
       console.error('❌ خطأ في معالجة الصورة:', error);
       
-      // طريقة بديلة مباشرة بدون ضغط
       toast.info('جاري استخدام طريقة بديلة...');
       
       const reader = new FileReader();
@@ -215,7 +239,6 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
   const removeImage = () => {
     setImagePreview('');
     setImageBase64('');
-    // إعادة تعيين حقل الإدخال
     const fileInput = document.querySelector('input[type="file"]');
     if (fileInput) fileInput.value = '';
   };
@@ -223,37 +246,30 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // التحقق من البيانات المطلوبة
-    if (!formData.name || !formData.price || !formData.stock) {
+    if (!formData.name || !formData.price) {
       toast.error('الرجاء ملء جميع الحقول المطلوبة');
       return;
     }
 
-    // التحقق من وجود صورة للمنتج الجديد
     if (!editingProduct && !imageBase64) {
       toast.error('الصورة مطلوبة للمنتج الجديد');
       return;
     }
 
-    // للمنتج الجديد، تحقق من حجم الصورة قبل الإرسال
-    if (!editingProduct && imageBase64) {
-      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-      const fileSizeInKB = (base64Data.length * 3) / 4 / 1024;
-      
-      if (fileSizeInKB > 500) {
-        toast.error('حجم الصورة كبير جداً بعد المعالجة. يرجى اختيار صورة أخرى');
-        return;
-      }
+    const hasStock = sizes.some(size => size.quantity > 0);
+    if (!hasStock) {
+      toast.error('يجب إضافة كمية على الأقل لمقاس واحد');
+      return;
     }
 
-    onSubmit(formData, imageBase64);
+    onSubmit(formData, imageBase64, sizes);
   };
 
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
@@ -351,36 +367,78 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  السعر (ج.م) *
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                السعر (ج.م) *
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleInputChange}
+                min="0"
+                step="0.01"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            {/* قسم المقاسات */}
+            <div className="border-2 border-gray-200 rounded-xl p-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">المقاسات والكميات *</h3>
+              
+              {/* اختيار المقاسات المتاحة */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  المقاسات المتاحة
                 </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  required
-                />
+                <div className="flex flex-wrap gap-2">
+                  {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => handleSizeToggle(size)}
+                      className={`px-3 py-2 rounded-lg border-2 transition-colors ${
+                        sizes.some(s => s.size === size)
+                          ? 'bg-pink-600 text-white border-pink-600'
+                          : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  المخزون *
+              {/* إدخال الكميات */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  الكميات لكل مقاس
                 </label>
-                <input
-                  type="number"
-                  name="stock"
-                  value={formData.stock}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  required
-                />
+                {sizes.map((sizeItem, index) => (
+                  <div key={sizeItem.size} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <span className="w-12 font-semibold text-gray-700">{sizeItem.size}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={sizeItem.quantity}
+                      onChange={(e) => handleSizeQuantityChange(index, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      placeholder="الكمية"
+                    />
+                    <span className="text-sm text-gray-500">قطعة</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* إجمالي المخزون */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-blue-800">إجمالي المخزون:</span>
+                  <span className="text-lg font-bold text-blue-800">
+                    {sizes.reduce((total, size) => total + size.quantity, 0)} قطعة
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -451,7 +509,7 @@ const ProductsManagement = () => {
     }
   };
 
-  const handleFormSubmit = async (formData, imageBase64) => {
+  const handleFormSubmit = async (formData, imageBase64, sizes) => {
     setFormLoading(true);
 
     try {
@@ -461,23 +519,22 @@ const ProductsManagement = () => {
         name: formData.name,
         description: formData.description || '',
         price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
+        sizes: sizes.filter(size => size.quantity > 0),
         bestseller: formData.bestseller,
-        imageBase64: imageBase64 || null // يمكن أن يكون null للمنتجات المعدلة بدون تغيير الصورة
+        imageBase64: imageBase64 || null
       };
 
       console.log('📋 البيانات المرسلة:', {
         name: formData.name,
         description: formData.description,
         price: formData.price,
-        stock: formData.stock,
+        sizes: productData.sizes,
         bestseller: formData.bestseller,
         hasNewImage: !!imageBase64,
         imageSize: imageBase64 ? Math.round(imageBase64.length / 1024) + 'KB' : 'No image'
       });
 
       if (editingProduct) {
-        // تحديث المنتج الموجود
         console.log('🔄 جاري تحديث المنتج:', editingProduct._id);
         const updatedProduct = await updateProduct(editingProduct._id, productData);
         
@@ -488,7 +545,6 @@ const ProductsManagement = () => {
         );
         toast.success('تم تحديث المنتج بنجاح');
       } else {
-        // إنشاء منتج جديد
         console.log('🆕 جاري إنشاء منتج جديد');
         const newProduct = await createProduct(productData);
         
@@ -501,7 +557,6 @@ const ProductsManagement = () => {
     } catch (err) {
       console.error('🔴 Error saving product:', err);
       
-      // رسائل خطأ محددة
       let errorMessage = err.message;
       if (err.message.includes('Cloudinary') || err.message.includes('رفع الصورة')) {
         errorMessage = 'فشل في رفع الصورة. يرجى المحاولة مرة أخرى';
@@ -644,11 +699,25 @@ const ProductsManagement = () => {
                   <span className="text-lg font-bold text-pink-600">
                     {product.price} ج.م
                   </span>
-                  <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                    product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {product.stock > 0 ? `متوفر (${product.stock})` : 'نفذ من المخزون'}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                      product.totalStock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.totalStock > 0 ? `متوفر (${product.totalStock})` : 'نفذ من المخزون'}
+                    </span>
+                    {product.sizes && product.sizes.length > 0 && (
+                      <div className="flex gap-1 mt-1">
+                        {product.sizes.slice(0, 3).map(size => (
+                          <span key={size.size} className="text-xs bg-gray-100 text-gray-600 px-1 rounded">
+                            {size.size}
+                          </span>
+                        ))}
+                        {product.sizes.length > 3 && (
+                          <span className="text-xs text-gray-500">+{product.sizes.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="text-xs text-gray-500">
