@@ -4,7 +4,7 @@ import axios from 'axios';
 // إنشاء instance من axios موجه للباك إند
 const api = axios.create({
   baseURL: 'https://ghalya-back-end.vercel.app/api',
-  timeout: 15000
+  timeout: 30000 // زيادة المهلة للهواتف
 });
 
 const useApi = () => {
@@ -49,6 +49,7 @@ const useApi = () => {
       return response.data;
     } catch (err) {
       console.error('🔴 API Error:', err.message);
+      console.error('🔴 Error Response:', err.response?.data);
       
       let errorMessage = 'حدث خطأ في الاتصال بالسيرفر';
       
@@ -56,6 +57,8 @@ const useApi = () => {
         errorMessage = err.response.data.message;
       } else if (err.code === 'ECONNABORTED') {
         errorMessage = 'انتهت مهلة الطلب. تحقق من اتصال الإنترنت.';
+      } else if (err.message.includes('Network Error')) {
+        errorMessage = 'فشل في الاتصال بالخادم. تحقق من اتصال الإنترنت.';
       }
       
       setError(errorMessage);

@@ -2,48 +2,79 @@ import React, { useState, useEffect } from 'react';
 import useApi from '../hooks/useApi';
 import { toast } from 'sonner';
 
-// دالة لضغط الصورة
-const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.7) => {
+// دالة ذكية لضغط الصور تعمل على جميع الأجهزة
+const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
   return new Promise((resolve, reject) => {
+    // التحقق مما إذا كان المتصفح يدعم Canvas
+    if (!window.HTMLCanvasElement) {
+      // إذا كان Canvas غير مدعوم، استخدم الصورة الأصلية
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('فشل في قراءة الملف'));
+      reader.readAsDataURL(file);
+      return;
+    }
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
 
     img.onload = function() {
-      // الحفاظ على نسبة العرض إلى الارتفاع
-      let width = img.width;
-      let height = img.height;
+      try {
+        let width = img.width;
+        let height = img.height;
 
-      if (width > height) {
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        // حساب الأبعاد الجديدة مع الحفاظ على النسبة
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
         }
-      } else {
-        if (height > maxHeight) {
-          width = Math.round((width * maxHeight) / height);
-          height = maxHeight;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // تعبئة الخلفية باللون الأبيض للصور الشفافة
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+        
+        // رسم الصورة
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // تحديد الجودة بناءً على حجم الملف الأصلي
+        let quality = 0.7; // جودة افتراضية
+        
+        if (file.size > 2 * 1024 * 1024) { // إذا كان الملف أكبر من 2MB
+          quality = 0.5;
+        } else if (file.size > 1 * 1024 * 1024) { // إذا كان الملف أكبر من 1MB
+          quality = 0.6;
         }
+
+        // تحويل إلى Base64
+        const base64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(base64);
+      } catch (error) {
+        reject(error);
       }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      // رسم الصورة على Canvas
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // تحويل إلى Base64
-      const base64 = canvas.toDataURL('image/jpeg', quality);
-      resolve(base64);
     };
 
     img.onerror = function() {
       reject(new Error('فشل في تحميل الصورة'));
     };
 
+    // استخدام FileReader مباشرة
     const reader = new FileReader();
     reader.onload = (e) => {
       img.src = e.target.result;
+    };
+    reader.onerror = () => {
+      reject(new Error('فشل في قراءة الملف'));
     };
     reader.readAsDataURL(file);
   });
@@ -106,24 +137,27 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       return;
     }
 
-    // التحقق من حجم الملف (10MB كحد أقصى قبل الضغط)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 10MB');
+    // تحقق من الحجم (4MB كحد أقصى للهواتف)
+    const maxSize = 4 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 4MB');
       return;
     }
 
     setImageLoading(true);
 
     try {
-      // عرض معاينة سريعة قبل الضغط
-      const quickPreviewReader = new FileReader();
-      quickPreviewReader.onload = (e) => {
-        setImagePreview(e.target.result);
-      };
-      quickPreviewReader.readAsDataURL(file);
+      // معاينة فورية أولية
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
 
-      // ضغط الصورة
-      const compressedBase64 = await compressImage(file, 1200, 1200, 0.8);
+      console.log('🔄 جاري معالجة الصورة...');
+      
+      // محاولة الضغط أولاً
+      const compressedBase64 = await compressImageUniversal(file, 600, 600);
+      
+      // تنظيف معاينة URL المؤقتة
+      URL.revokeObjectURL(previewUrl);
       
       setImagePreview(compressedBase64);
       setImageBase64(compressedBase64);
@@ -131,16 +165,43 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       const compressedSize = Math.round((compressedBase64.length * 3) / 4 / 1024);
       console.log(`📊 حجم الصورة بعد الضغط: ${compressedSize}KB`);
       
-      toast.success(`تم تحميل الصورة بنجاح (${compressedSize}KB)`);
+      if (compressedSize > 800) {
+        // إذا كانت الصورة لا تزال كبيرة، حاول بضغط أقوى
+        toast.warning('جاري ضغط الصورة أكثر...');
+        const moreCompressed = await compressImageUniversal(file, 400, 400);
+        setImagePreview(moreCompressed);
+        setImageBase64(moreCompressed);
+        
+        const newSize = Math.round((moreCompressed.length * 3) / 4 / 1024);
+        toast.success(`تم تحميل الصورة بنجاح (${newSize}KB)`);
+      } else {
+        toast.success(`تم تحميل الصورة بنجاح (${compressedSize}KB)`);
+      }
     } catch (error) {
-      console.error('Error compressing image:', error);
-      toast.error('حدث خطأ في معالجة الصورة');
+      console.error('❌ خطأ في معالجة الصورة:', error);
       
-      // استخدام الصورة الأصلية كبديل في حالة الخطأ
+      // طريقة بديلة مباشرة بدون ضغط
+      toast.info('جاري استخدام طريقة بديلة...');
+      
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target.result);
-        setImageBase64(e.target.result);
+        const base64 = e.target.result;
+        const fileSize = Math.round((base64.length * 3) / 4 / 1024);
+        
+        if (fileSize > 1000) {
+          toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أخرى');
+          setImagePreview('');
+          setImageBase64('');
+        } else {
+          setImagePreview(base64);
+          setImageBase64(base64);
+          toast.success('تم تحميل الصورة بنجاح');
+        }
+      };
+      reader.onerror = () => {
+        toast.error('فشل في تحميل الصورة. حاول مرة أخرى');
+        setImagePreview('');
+        setImageBase64('');
       };
       reader.readAsDataURL(file);
     } finally {
@@ -169,6 +230,17 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     if (!editingProduct && !imageBase64) {
       toast.error('الصورة مطلوبة للمنتج الجديد');
       return;
+    }
+
+    // تحقق نهائي من حجم الصورة قبل الإرسال
+    if (imageBase64) {
+      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      const fileSizeInKB = (base64Data.length * 3) / 4 / 1024;
+      
+      if (fileSizeInKB > 1500) {
+        toast.error('حجم الصورة كبير جداً بعد المعالجة. يرجى اختيار صورة أخرى');
+        return;
+      }
     }
 
     onSubmit(formData, imageBase64);
@@ -231,7 +303,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
               />
               <p className="text-xs text-gray-500 mt-1">
-                اختر صورة من الجهاز (JPEG, PNG, WebP) - أقصى حجم 10MB
+                اختر صورة من الجهاز - أقصى حجم 4MB
               </p>
               
               {imageLoading && (
@@ -253,7 +325,6 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                 required
-                autoFocus
               />
             </div>
 
@@ -418,7 +489,16 @@ const ProductsManagement = () => {
       setEditingProduct(null);
     } catch (err) {
       console.error('🔴 Error saving product:', err);
-      toast.error(err.message || (editingProduct ? 'فشل في تحديث المنتج' : 'فشل في إضافة المنتج'));
+      
+      // رسائل خطأ محددة
+      let errorMessage = err.message;
+      if (err.message.includes('5MB')) {
+        errorMessage = 'حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 4MB';
+      } else if (err.message.includes('timed out')) {
+        errorMessage = 'انتهت مهلة الاتصال. تحقق من اتصال الإنترنت وحاول مرة أخرى';
+      }
+      
+      toast.error(errorMessage || (editingProduct ? 'فشل في تحديث المنتج' : 'فشل في إضافة المنتج'));
     } finally {
       setFormLoading(false);
     }
