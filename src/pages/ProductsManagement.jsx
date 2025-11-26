@@ -2,6 +2,90 @@ import React, { useState, useEffect } from 'react';
 import useApi from '../hooks/useApi';
 import { toast } from 'sonner';
 
+// دالة لضغط الصورة
+const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.7) => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = function() {
+      // الحفاظ على نسبة العرض إلى الارتفاع
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // تدوير الصورة بناءً على بيانات EXIF
+      const orientation = getImageOrientation(file);
+      applyImageOrientation(ctx, img, orientation, width, height);
+
+      // تحويل إلى Base64
+      const base64 = canvas.toDataURL('image/jpeg', quality);
+      resolve(base64);
+    };
+
+    img.onerror = function() {
+      reject(new Error('فشل في تحميل الصورة'));
+    };
+
+    // قراءة بيانات EXIF للتدوير
+    function getImageOrientation(file) {
+      // في المتصفحات الحديثة، يمكن استخدام EXIF.js لمزيد من الدقة
+      // هنا نستخدم طريقة مبسطة
+      return 1; // القيمة الافتراضية
+    }
+
+    function applyImageOrientation(ctx, img, orientation, width, height) {
+      switch (orientation) {
+        case 2:
+          ctx.transform(-1, 0, 0, 1, width, 0);
+          break;
+        case 3:
+          ctx.transform(-1, 0, 0, -1, width, height);
+          break;
+        case 4:
+          ctx.transform(1, 0, 0, -1, 0, height);
+          break;
+        case 5:
+          ctx.transform(0, 1, 1, 0, 0, 0);
+          break;
+        case 6:
+          ctx.transform(0, 1, -1, 0, height, 0);
+          break;
+        case 7:
+          ctx.transform(0, -1, -1, 0, height, width);
+          break;
+        case 8:
+          ctx.transform(0, -1, 1, 0, 0, width);
+          break;
+        default:
+          ctx.drawImage(img, 0, 0, width, height);
+          break;
+      }
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 // Extract ProductForm to a separate component
 const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
   const [formData, setFormData] = useState({
@@ -13,6 +97,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
   });
   const [imagePreview, setImagePreview] = useState('');
   const [imageBase64, setImageBase64] = useState('');
+  const [imageLoading, setImageLoading] = useState(false);
 
   // Reset form when editingProduct changes
   useEffect(() => {
@@ -47,29 +132,55 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     }));
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      // التحقق من نوع الملف
-      if (!file.type.startsWith('image/')) {
-        toast.error('يجب اختيار ملف صورة فقط');
-        return;
-      }
+    if (!file) return;
 
-      // التحقق من حجم الملف (2MB كحد أقصى لتجنب مشاكل Base64)
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('حجم الصورة يجب أن يكون أقل من 2MB');
-        return;
-      }
+    // التحقق من نوع الملف
+    if (!file.type.startsWith('image/')) {
+      toast.error('يجب اختيار ملف صورة فقط (JPEG, PNG, WebP)');
+      return;
+    }
 
-      // إنشاء معاينة للصورة
+    // التحقق من حجم الملف (10MB كحد أقصى قبل الضغط)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 10MB');
+      return;
+    }
+
+    setImageLoading(true);
+
+    try {
+      // عرض معاينة سريعة قبل الضغط
+      const quickPreviewReader = new FileReader();
+      quickPreviewReader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      quickPreviewReader.readAsDataURL(file);
+
+      // ضغط الصورة
+      const compressedBase64 = await compressImage(file, 1200, 1200, 0.8);
+      
+      setImagePreview(compressedBase64);
+      setImageBase64(compressedBase64);
+      
+      const compressedSize = Math.round((compressedBase64.length * 3) / 4 / 1024);
+      console.log(`📊 حجم الصورة بعد الضغط: ${compressedSize}KB`);
+      
+      toast.success(`تم تحميل الصورة بنجاح (${compressedSize}KB)`);
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      toast.error('حدث خطأ في معالجة الصورة');
+      
+      // استخدام الصورة الأصلية كبديل في حالة الخطأ
       const reader = new FileReader();
       reader.onload = (e) => {
-        const base64 = e.target.result;
-        setImagePreview(base64);
-        setImageBase64(base64);
+        setImagePreview(e.target.result);
+        setImageBase64(e.target.result);
       };
       reader.readAsDataURL(file);
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -151,10 +262,18 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 accept="image/*"
                 onChange={handleImageChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                capture="environment" // للهواتف - يفتح الكاميرا مباشرة
               />
               <p className="text-xs text-gray-500 mt-1">
-                يدعم الصور بحجم أقل من 2MB (JPEG, PNG, WebP)
+                يمكنك التقاط صورة أو اختيار من المعرض. يدعم حتى 10MB
               </p>
+              
+              {imageLoading && (
+                <div className="flex items-center justify-center mt-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+                  <span className="mr-2 text-xs text-gray-600">جاري معالجة الصورة...</span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -236,19 +355,20 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 type="button"
                 onClick={onClose}
                 className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                disabled={loading}
+                disabled={loading || imageLoading}
               >
                 إلغاء
               </button>
               <button
                 type="submit"
                 className="flex-1 px-4 py-2 bg-pink-600 text-white rounded-lg font-medium hover:bg-pink-700 transition-colors flex items-center justify-center gap-2"
-                disabled={loading}
+                disabled={loading || imageLoading}
               >
-                {loading ? (
+                {loading || imageLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    {editingProduct ? 'جاري التحديث...' : 'جاري الإضافة...'}
+                    {imageLoading ? 'جاري معالجة الصورة...' : 
+                     editingProduct ? 'جاري التحديث...' : 'جاري الإضافة...'}
                   </>
                 ) : (
                   editingProduct ? 'تحديث المنتج' : 'إضافة المنتج'
@@ -305,7 +425,7 @@ const ProductsManagement = () => {
         price: formData.price,
         stock: formData.stock,
         bestseller: formData.bestseller,
-        hasImage: !!imageBase64
+        imageSize: imageBase64 ? Math.round(imageBase64.length / 1024) + 'KB' : 'No image'
       });
 
       if (editingProduct) {
