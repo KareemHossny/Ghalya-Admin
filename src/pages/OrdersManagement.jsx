@@ -89,14 +89,14 @@ const OrdersManagement = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50" onClick={onClose}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto mx-2" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mx-2" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-4 sm:p-6 text-white rounded-t-2xl">
+          <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-4 sm:p-6 text-white rounded-t-xl sm:rounded-t-2xl">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg sm:text-2xl font-bold truncate">تفاصيل الطلب #{order._id.slice(-8)}</h2>
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-sm ${
+                <div className="flex items-center gap-2 sm:gap-3 mt-2 flex-wrap">
+                  <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-sm ${
                     order.status === 'completed' ? 'text-green-100' : 
                     order.status === 'pending' ? 'text-yellow-100' : 
                     order.status === 'cancelled' ? 'text-red-100' : 'text-blue-100'
@@ -112,7 +112,7 @@ const OrdersManagement = () => {
               </div>
               <button
                 onClick={onClose}
-                className="p-1 sm:p-2 hover:bg-white/20 rounded-xl transition-all duration-200 flex-shrink-0 ml-2"
+                className="p-1 sm:p-2 hover:bg-white/20 rounded-lg sm:rounded-xl transition-all duration-200 flex-shrink-0 ml-2"
               >
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -123,7 +123,7 @@ const OrdersManagement = () => {
           
           <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* Customer Information */}
-            <div className="bg-gradient-to-l from-pink-50 to-purple-50 rounded-2xl p-3 sm:p-5 border border-pink-100">
+            <div className="bg-gradient-to-l from-pink-50 to-purple-50 rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-pink-100">
               <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 bg-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -132,28 +132,28 @@ const OrdersManagement = () => {
                 </div>
                 معلومات العميل
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-white p-2 sm:p-3 rounded-xl border border-gray-200">
+              <div className="grid grid-cols-1 gap-3">
+                <div className="bg-white p-3 rounded-xl border border-gray-200">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">الاسم</label>
-                  <p className="text-gray-900 font-bold text-sm sm:text-base truncate">{order.customerName}</p>
+                  <p className="text-gray-900 font-bold text-sm sm:text-base">{order.customerName}</p>
                 </div>
-                <div className="bg-white p-2 sm:p-3 rounded-xl border border-gray-200">
+                <div className="bg-white p-3 rounded-xl border border-gray-200">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">الهاتف</label>
-                  <p className="text-gray-900 font-bold text-sm sm:text-base direction-ltr text-left truncate">{order.customerPhone}</p>
+                  <p className="text-gray-900 font-bold text-sm sm:text-base direction-ltr text-left">{order.customerPhone}</p>
                 </div>
-                <div className="bg-white p-2 sm:p-3 rounded-xl border border-gray-200">
+                <div className="bg-white p-3 rounded-xl border border-gray-200">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">المحافظة</label>
-                  <p className="text-gray-900 font-bold text-sm sm:text-base truncate">{getGovernorateName(order.governorate)}</p>
+                  <p className="text-gray-900 font-bold text-sm sm:text-base">{getGovernorateName(order.governorate)}</p>
                 </div>
-                <div className="sm:col-span-2 bg-white p-2 sm:p-3 rounded-xl border border-gray-200">
+                <div className="bg-white p-3 rounded-xl border border-gray-200">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">العنوان</label>
-                  <p className="text-gray-900 font-bold text-sm sm:text-base break-words">{order.customerAddress}</p>
+                  <p className="text-gray-900 font-bold text-sm sm:text-base">{order.customerAddress}</p>
                 </div>
               </div>
             </div>
 
             {/* Order Items */}
-            <div className="bg-white rounded-2xl p-3 sm:p-5 border border-gray-200">
+            <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-gray-200">
               <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
                   <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,16 +170,16 @@ const OrdersManagement = () => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                       <tr>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
+                        <th className="px-3 py-2 sm:px-4 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
                           المنتج
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
+                        <th className="px-3 py-2 sm:px-4 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
                           السعر
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
+                        <th className="px-3 py-2 sm:px-4 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
                           الكمية
                         </th>
-                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
+                        <th className="px-3 py-2 sm:px-4 sm:py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">
                           الإجمالي
                         </th>
                       </tr>
@@ -187,14 +187,14 @@ const OrdersManagement = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {order.items.map((item, index) => (
                         <tr key={index} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-2 sm:px-4 py-2 sm:py-3">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3">
                             <div className="flex items-center">
                               <img
                                 src={item.product.image}
                                 alt={item.product.name}
                                 className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-lg ml-2 sm:ml-3 border border-gray-200 flex-shrink-0"
                                 onError={(e) => {
-                                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iI0YzRjRGNiIvPgo8cGF0aCBkPSJNMTggMTZMMjAgMTRMMTQgOEwxMiAxMEwyMCAxOEwyMiAxNkwyMCAxNEwyMiAxMkwyMCAxMEwxOCAxMkwyMCAxNEwxOCAxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0AiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiNGM0Y0RjYiLz4KPHBhdGggZD0iTTE4IDE2TDIwIDE0TDE0IDhMMTIgMTBMMjAgMThMMjIgMTZMMjAgMTRMMjIgMTJMMjAgMTBMMTggMTJMMjAgMTRMMTggMTZaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPg==';
                                 }}
                               />
                               <div className="text-right min-w-0 flex-1">
@@ -204,15 +204,15 @@ const OrdersManagement = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-bold text-gray-900 whitespace-nowrap">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-gray-900 whitespace-nowrap">
                             {item.product.price} ج.م
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3">
                             <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-lg text-xs font-bold">
                               {item.quantity}
                             </span>
                           </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-bold text-green-600 whitespace-nowrap">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-green-600 whitespace-nowrap">
                             {item.product.price * item.quantity} ج.م
                           </td>
                         </tr>
@@ -224,7 +224,7 @@ const OrdersManagement = () => {
             </div>
 
             {/* Order Summary */}
-            <div className="bg-gradient-to-l from-pink-50 to-purple-50 rounded-2xl p-3 sm:p-5 border border-pink-100">
+            <div className="bg-gradient-to-l from-pink-50 to-purple-50 rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-pink-100">
               <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
                   <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,11 +234,11 @@ const OrdersManagement = () => {
                 ملخص الطلب
               </h3>
               <div className="space-y-2 sm:space-y-3 bg-white p-3 sm:p-4 rounded-xl border border-gray-200">
-                <div className="flex justify-between items-center py-1 sm:py-2">
+                <div className="flex justify-between items-center py-2">
                   <span className="text-xs sm:text-sm text-gray-600 font-semibold">المجموع:</span>
                   <span className="text-xs sm:text-sm text-gray-900 font-bold">{subtotal} ج.م</span>
                 </div>
-                <div className="flex justify-between items-center py-1 sm:py-2">
+                <div className="flex justify-between items-center py-2">
                   <span className="text-xs sm:text-sm text-gray-600 font-semibold">مصاريف الشحن:</span>
                   <span className="text-xs sm:text-sm text-gray-900 font-bold">{order.shippingCost} ج.م</span>
                 </div>
@@ -251,7 +251,7 @@ const OrdersManagement = () => {
 
             {/* Additional Notes */}
             {order.notes && (
-              <div className="bg-yellow-50 rounded-2xl p-3 sm:p-5 border border-yellow-200">
+              <div className="bg-yellow-50 rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-yellow-200">
                 <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-2">
                   <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,7 +260,7 @@ const OrdersManagement = () => {
                   </div>
                   ملاحظات إضافية
                 </h3>
-                <div className="bg-white p-2 sm:p-3 rounded-xl border border-yellow-200">
+                <div className="bg-white p-3 rounded-xl border border-yellow-200">
                   <p className="text-gray-700 text-xs sm:text-sm">{order.notes}</p>
                 </div>
               </div>
@@ -291,45 +291,45 @@ const OrdersManagement = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
-          <p className="text-red-800 font-medium">{error}</p>
+        <div className="bg-red-50 border-2 border-red-200 rounded-xl sm:rounded-2xl p-4">
+          <p className="text-red-800 font-medium text-sm sm:text-base">{error}</p>
         </div>
       )}
 
       {/* Orders Table */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         {orders.length === 0 && !apiLoading ? (
-          <div className="text-center py-16">
+          <div className="text-center py-12 sm:py-16">
             <svg className="w-16 h-16 sm:w-20 sm:h-20 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">لا توجد طلبات</h3>
-            <p className="text-gray-500">لم يتم تقديم أي طلبات حتى الآن</p>
+            <p className="text-gray-500 text-sm sm:text-base">لم يتم تقديم أي طلبات حتى الآن</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     الطلب
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     العميل
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     المحافظة
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     المبلغ
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     الحالة
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     التاريخ
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     الإجراءات
                   </th>
                 </tr>
@@ -337,13 +337,13 @@ const OrdersManagement = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {orders.map((order) => (
                   <tr key={order._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
                       <div className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[80px] sm:max-w-none">
-                        #{order._id}
+                        #{order._id.slice(-6)}
                       </div>
                     </td>
-                    <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
-                      <div>
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
+                      <div className="min-w-0">
                         <div className="text-xs sm:text-sm font-semibold text-gray-900 truncate max-w-[100px] sm:max-w-none">
                           {order.customerName}
                         </div>
@@ -352,19 +352,19 @@ const OrdersManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900 truncate max-w-[80px] sm:max-w-none">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900 truncate max-w-[80px] sm:max-w-none">
                       {getGovernorateName(order.governorate)}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm font-bold text-gray-900">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm font-bold text-gray-900">
                       {order.totalAmount} ج.م
                     </td>
-                    <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
                       <div className="flex items-center">
                         <select
                           value={order.status}
                           onChange={(e) => updateOrderStatusHandler(order._id, e.target.value)}
                           disabled={updatingOrder === order._id}
-                          className={`text-xs sm:text-sm font-semibold rounded-xl px-2 py-1 sm:px-3 sm:py-2 border-0 focus:ring-2 focus:ring-pink-500 transition-colors ${
+                          className={`text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl px-2 sm:px-3 py-1 sm:py-2 border-0 focus:ring-2 focus:ring-pink-500 transition-colors w-full max-w-[120px] sm:max-w-none ${
                             order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
                             'bg-green-100 text-green-800'
@@ -375,19 +375,19 @@ const OrdersManagement = () => {
                           <option value="delivered">تم التسليم</option>
                         </select>
                         {updatingOrder === order._id && (
-                          <div className="inline-block mr-2">
+                          <div className="inline-block mr-1 sm:mr-2">
                             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 font-medium">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-xs text-gray-500 font-medium">
                       {new Date(order.orderDate).toLocaleDateString('ar-EG')}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm font-semibold">
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm font-semibold">
                       <button
                         onClick={() => setSelectedOrder(order)}
-                        className="text-pink-600 hover:text-pink-700 ml-2 sm:ml-4 transition-colors"
+                        className="text-pink-600 hover:text-pink-700 ml-2 sm:ml-4 transition-colors text-xs sm:text-sm"
                       >
                         التفاصيل
                       </button>

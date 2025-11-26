@@ -3,7 +3,7 @@ import useApi from '../hooks/useApi';
 import { toast } from 'sonner';
 
 // دالة ذكية لضغط الصور تعمل على جميع الأجهزة
-const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
+const compressImageUniversal = (file, maxWidth = 800, maxHeight = 800) => {
   return new Promise((resolve, reject) => {
     // التحقق مما إذا كان المتصفح يدعم Canvas
     if (!window.HTMLCanvasElement) {
@@ -48,12 +48,12 @@ const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
         ctx.drawImage(img, 0, 0, width, height);
 
         // تحديد الجودة بناءً على حجم الملف الأصلي
-        let quality = 0.7; // جودة افتراضية
+        let quality = 0.8; // جودة افتراضية أعلى لأن Cloudinary سيعتني بالضغط
         
         if (file.size > 2 * 1024 * 1024) { // إذا كان الملف أكبر من 2MB
-          quality = 0.5;
+          quality = 0.7;
         } else if (file.size > 1 * 1024 * 1024) { // إذا كان الملف أكبر من 1MB
-          quality = 0.6;
+          quality = 0.75;
         }
 
         // تحويل إلى Base64
@@ -104,7 +104,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         bestseller: editingProduct.bestseller || false
       });
       setImagePreview(editingProduct.image || '');
-      setImageBase64(editingProduct.image || '');
+      setImageBase64(''); // لا نحتاج لـ Base64 للمنتجات الحالية
     } else {
       setFormData({
         name: '',
@@ -137,10 +137,10 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       return;
     }
 
-    // تحقق من الحجم (4MB كحد أقصى للهواتف)
-    const maxSize = 4 * 1024 * 1024;
+    // تحقق من الحجم (5MB كحد أقصى)
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 4MB');
+      toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 5MB');
       return;
     }
 
@@ -154,7 +154,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       console.log('🔄 جاري معالجة الصورة...');
       
       // محاولة الضغط أولاً
-      const compressedBase64 = await compressImageUniversal(file, 600, 600);
+      const compressedBase64 = await compressImageUniversal(file, 800, 800);
       
       // تنظيف معاينة URL المؤقتة
       URL.revokeObjectURL(previewUrl);
@@ -165,18 +165,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       const compressedSize = Math.round((compressedBase64.length * 3) / 4 / 1024);
       console.log(`📊 حجم الصورة بعد الضغط: ${compressedSize}KB`);
       
-      if (compressedSize > 800) {
-        // إذا كانت الصورة لا تزال كبيرة، حاول بضغط أقوى
-        toast.warning('جاري ضغط الصورة أكثر...');
-        const moreCompressed = await compressImageUniversal(file, 400, 400);
-        setImagePreview(moreCompressed);
-        setImageBase64(moreCompressed);
-        
-        const newSize = Math.round((moreCompressed.length * 3) / 4 / 1024);
-        toast.success(`تم تحميل الصورة بنجاح (${newSize}KB)`);
-      } else {
-        toast.success(`تم تحميل الصورة بنجاح (${compressedSize}KB)`);
-      }
+      toast.success(`تم تحميل الصورة بنجاح (${compressedSize}KB)`);
     } catch (error) {
       console.error('❌ خطأ في معالجة الصورة:', error);
       
@@ -188,7 +177,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         const base64 = e.target.result;
         const fileSize = Math.round((base64.length * 3) / 4 / 1024);
         
-        if (fileSize > 1000) {
+        if (fileSize > 3000) {
           toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أخرى');
           setImagePreview('');
           setImageBase64('');
@@ -232,12 +221,12 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       return;
     }
 
-    // تحقق نهائي من حجم الصورة قبل الإرسال
-    if (imageBase64) {
+    // للمنتج الجديد، تحقق من حجم الصورة قبل الإرسال
+    if (!editingProduct && imageBase64) {
       const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
       const fileSizeInKB = (base64Data.length * 3) / 4 / 1024;
       
-      if (fileSizeInKB > 1500) {
+      if (fileSizeInKB > 2000) {
         toast.error('حجم الصورة كبير جداً بعد المعالجة. يرجى اختيار صورة أخرى');
         return;
       }
@@ -269,25 +258,29 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* معاينة الصورة */}
-            {imagePreview && (
+            {(imagePreview || (editingProduct && editingProduct.image)) && (
               <div className="text-center">
                 <div className="relative inline-block">
                   <img
-                    src={imagePreview}
+                    src={imagePreview || editingProduct.image}
                     alt="معاينة الصورة"
                     className="w-32 h-32 object-cover rounded-lg border border-gray-300"
                   />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-                <p className="text-sm text-gray-500 mt-2">معاينة الصورة</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  {imagePreview ? 'معاينة الصورة الجديدة' : 'الصورة الحالية'}
+                </p>
               </div>
             )}
 
@@ -303,7 +296,10 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
               />
               <p className="text-xs text-gray-500 mt-1">
-                اختر صورة من الجهاز - أقصى حجم 4MB
+                اختر صورة من الجهاز - أقصى حجم 5MB
+                {editingProduct && editingProduct.image && (
+                  <span className="block text-green-600">✓ الصورة الحالية مخزنة في السحابة</span>
+                )}
               </p>
               
               {imageLoading && (
@@ -453,7 +449,7 @@ const ProductsManagement = () => {
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         bestseller: formData.bestseller,
-        imageBase64: imageBase64
+        imageBase64: imageBase64 || null // يمكن أن يكون null للمنتجات المعدلة بدون تغيير الصورة
       };
 
       console.log('📋 البيانات المرسلة:', {
@@ -462,7 +458,7 @@ const ProductsManagement = () => {
         price: formData.price,
         stock: formData.stock,
         bestseller: formData.bestseller,
-        imageSize: imageBase64 ? Math.round(imageBase64.length / 1024) + 'KB' : 'No image'
+        hasNewImage: !!imageBase64
       });
 
       if (editingProduct) {
@@ -492,8 +488,10 @@ const ProductsManagement = () => {
       
       // رسائل خطأ محددة
       let errorMessage = err.message;
-      if (err.message.includes('5MB')) {
-        errorMessage = 'حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 4MB';
+      if (err.message.includes('Cloudinary') || err.message.includes('رفع الصورة')) {
+        errorMessage = 'فشل في رفع الصورة. يرجى المحاولة مرة أخرى';
+      } else if (err.message.includes('5MB')) {
+        errorMessage = 'حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 5MB';
       } else if (err.message.includes('timed out')) {
         errorMessage = 'انتهت مهلة الاتصال. تحقق من اتصال الإنترنت وحاول مرة أخرى';
       }
