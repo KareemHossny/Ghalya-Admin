@@ -11,8 +11,8 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     stock: '',
     bestseller: false
   });
-  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [imageBase64, setImageBase64] = useState('');
 
   // Reset form when editingProduct changes
   useEffect(() => {
@@ -25,7 +25,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         bestseller: editingProduct.bestseller || false
       });
       setImagePreview(editingProduct.image || '');
-      setImageFile(null);
+      setImageBase64(editingProduct.image || '');
     } else {
       setFormData({
         name: '',
@@ -35,7 +35,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         bestseller: false
       });
       setImagePreview('');
-      setImageFile(null);
+      setImageBase64('');
     }
   }, [editingProduct]);
 
@@ -56,26 +56,26 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         return;
       }
 
-      // التحقق من حجم الملف (5MB كحد أقصى)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('حجم الصورة يجب أن يكون أقل من 5MB');
+      // التحقق من حجم الملف (2MB كحد أقصى لتجنب مشاكل Base64)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('حجم الصورة يجب أن يكون أقل من 2MB');
         return;
       }
 
-      setImageFile(file);
-      
       // إنشاء معاينة للصورة
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target.result);
+        const base64 = e.target.result;
+        setImagePreview(base64);
+        setImageBase64(base64);
       };
       reader.readAsDataURL(file);
     }
   };
 
   const removeImage = () => {
-    setImageFile(null);
     setImagePreview('');
+    setImageBase64('');
   };
 
   const handleSubmit = (e) => {
@@ -88,12 +88,12 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     }
 
     // التحقق من وجود صورة للمنتج الجديد
-    if (!editingProduct && !imageFile) {
+    if (!editingProduct && !imageBase64) {
       toast.error('الصورة مطلوبة للمنتج الجديد');
       return;
     }
 
-    onSubmit(formData, imageFile);
+    onSubmit(formData, imageBase64);
   };
 
   if (!show) return null;
@@ -119,11 +119,11 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* معاينة الصورة */}
-            {(imagePreview || (editingProduct && editingProduct.image)) && (
+            {imagePreview && (
               <div className="text-center">
                 <div className="relative inline-block">
                   <img
-                    src={imagePreview || editingProduct.image}
+                    src={imagePreview}
                     alt="معاينة الصورة"
                     className="w-32 h-32 object-cover rounded-lg border border-gray-300"
                   />
@@ -153,7 +153,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
               />
               <p className="text-xs text-gray-500 mt-1">
-                يدعم الصور بحجم أقل من 5MB (JPEG, PNG, WebP)
+                يدعم الصور بحجم أقل من 2MB (JPEG, PNG, WebP)
               </p>
             </div>
 
@@ -284,25 +284,20 @@ const ProductsManagement = () => {
     }
   };
 
-  const handleFormSubmit = async (formData, imageFile) => {
+  const handleFormSubmit = async (formData, imageBase64) => {
     setFormLoading(true);
 
     try {
       console.log('📤 بدء إرسال بيانات المنتج...');
 
-      // إنشاء FormData لإرسال البيانات
-      const submitData = new FormData();
-      submitData.append('name', formData.name);
-      submitData.append('description', formData.description || '');
-      submitData.append('price', formData.price);
-      submitData.append('stock', formData.stock);
-      submitData.append('bestseller', formData.bestseller);
-
-      // إضافة الصورة إذا كانت موجودة
-      if (imageFile) {
-        submitData.append('image', imageFile);
-        console.log('🖼️ تم إضافة الصورة:', imageFile.name, imageFile.size);
-      }
+      const productData = {
+        name: formData.name,
+        description: formData.description || '',
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        bestseller: formData.bestseller,
+        imageBase64: imageBase64
+      };
 
       console.log('📋 البيانات المرسلة:', {
         name: formData.name,
@@ -310,13 +305,13 @@ const ProductsManagement = () => {
         price: formData.price,
         stock: formData.stock,
         bestseller: formData.bestseller,
-        hasImage: !!imageFile
+        hasImage: !!imageBase64
       });
 
       if (editingProduct) {
         // تحديث المنتج الموجود
         console.log('🔄 جاري تحديث المنتج:', editingProduct._id);
-        const updatedProduct = await updateProduct(editingProduct._id, submitData);
+        const updatedProduct = await updateProduct(editingProduct._id, productData);
         
         setProducts(prev => 
           prev.map(product => 
@@ -327,7 +322,7 @@ const ProductsManagement = () => {
       } else {
         // إنشاء منتج جديد
         console.log('🆕 جاري إنشاء منتج جديد');
-        const newProduct = await createProduct(submitData);
+        const newProduct = await createProduct(productData);
         
         setProducts(prev => [newProduct, ...prev]);
         toast.success('تم إضافة المنتج بنجاح');

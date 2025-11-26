@@ -4,25 +4,21 @@ import axios from 'axios';
 // إنشاء instance من axios موجه للباك إند
 const api = axios.create({
   baseURL: 'https://ghalya-back-end.vercel.app/api',
-  timeout: 30000
+  timeout: 15000
 });
 
 const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // إعداد المصادقة مع دعم FormData
-  const setupAuth = (config = {}, isFormData = false) => {
+  // إعداد المصادقة
+  const setupAuth = (config = {}) => {
     const token = localStorage.getItem('adminToken');
     
     const headers = {
+      'Content-Type': 'application/json',
       ...config.headers
     };
-    
-    // لا نضيف Content-Type تلقائياً لـ FormData
-    if (!isFormData) {
-      headers['Content-Type'] = 'application/json';
-    }
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -42,7 +38,6 @@ const useApi = () => {
     try {
       const response = await apiCall();
       
-      // تحقق من وجود success في الرد
       if (response.data && response.data.success === false) {
         throw new Error(response.data.message || 'حدث خطأ في الخادم');
       }
@@ -53,22 +48,18 @@ const useApi = () => {
       
       return response.data;
     } catch (err) {
-      console.error('🔴 API Error:', err);
-      console.error('🔴 Error Response:', err.response?.data);
+      console.error('🔴 API Error:', err.message);
       
       let errorMessage = 'حدث خطأ في الاتصال بالسيرفر';
       
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
       } else if (err.code === 'ECONNABORTED') {
         errorMessage = 'انتهت مهلة الطلب. تحقق من اتصال الإنترنت.';
       }
       
       setError(errorMessage);
       
-      // إذا كان الخطأ غير مصرح به، مسح التوكن وإعادة التوجيه
       if (err.response?.status === 401) {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminAuth');
@@ -86,27 +77,11 @@ const useApi = () => {
   const getProducts = useCallback(() => 
     callApi(() => api.get('/admin/products', setupAuth())), [callApi]);
 
-  // تعديل createProduct لدعم FormData
-  const createProduct = useCallback((productData) => {
-    const isFormData = productData instanceof FormData;
-    console.log('🟡 إرسال بيانات المنتج:', isFormData ? 'FormData' : 'JSON');
-    
-    return callApi(() => 
-      api.post('/admin/products', productData, setupAuth({}, isFormData)), 
-      'تم إضافة المنتج بنجاح'
-    );
-  }, [callApi]);
+  const createProduct = useCallback((productData) => 
+    callApi(() => api.post('/admin/products', productData, setupAuth()), 'تم إضافة المنتج بنجاح'), [callApi]);
 
-  // تعديل updateProduct لدعم FormData
-  const updateProduct = useCallback((id, productData) => {
-    const isFormData = productData instanceof FormData;
-    console.log('🟡 تحديث بيانات المنتج:', id, isFormData ? 'FormData' : 'JSON');
-    
-    return callApi(() => 
-      api.put(`/admin/products/${id}`, productData, setupAuth({}, isFormData)), 
-      'تم تحديث المنتج بنجاح'
-    );
-  }, [callApi]);
+  const updateProduct = useCallback((id, productData) => 
+    callApi(() => api.put(`/admin/products/${id}`, productData, setupAuth()), 'تم تحديث المنتج بنجاح'), [callApi]);
 
   const deleteProduct = useCallback((id) => 
     callApi(() => api.delete(`/admin/products/${id}`, setupAuth()), 'تم حذف المنتج بنجاح'), [callApi]);
