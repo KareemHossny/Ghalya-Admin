@@ -3,7 +3,7 @@ import useApi from '../hooks/useApi';
 import { toast } from 'sonner';
 
 // دالة ذكية لضغط الصور تعمل على جميع الأجهزة
-const compressImageUniversal = (file, maxWidth = 800, maxHeight = 800) => {
+const compressImageUniversal = (file, maxWidth = 600, maxHeight = 600) => {
   return new Promise((resolve, reject) => {
     // التحقق مما إذا كان المتصفح يدعم Canvas
     if (!window.HTMLCanvasElement) {
@@ -47,17 +47,20 @@ const compressImageUniversal = (file, maxWidth = 800, maxHeight = 800) => {
         // رسم الصورة
         ctx.drawImage(img, 0, 0, width, height);
 
-        // تحديد الجودة بناءً على حجم الملف الأصلي
-        let quality = 0.8; // جودة افتراضية أعلى لأن Cloudinary سيعتني بالضغط
+        // جودة أقل لتقليل الحجم
+        let quality = 0.6; // خفض الجودة
         
-        if (file.size > 2 * 1024 * 1024) { // إذا كان الملف أكبر من 2MB
-          quality = 0.7;
-        } else if (file.size > 1 * 1024 * 1024) { // إذا كان الملف أكبر من 1MB
-          quality = 0.75;
+        if (file.size > 2 * 1024 * 1024) {
+          quality = 0.5;
+        } else if (file.size > 1 * 1024 * 1024) {
+          quality = 0.55;
         }
 
+        // استخدام JPEG لأفضل ضغط
+        const format = 'image/jpeg';
+        
         // تحويل إلى Base64
-        const base64 = canvas.toDataURL('image/jpeg', quality);
+        const base64 = canvas.toDataURL(format, quality);
         resolve(base64);
       } catch (error) {
         reject(error);
@@ -137,10 +140,10 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       return;
     }
 
-    // تحقق من الحجم (5MB كحد أقصى)
-    const maxSize = 5 * 1024 * 1024;
+    // تحقق من الحجم (3MB كحد أقصى)
+    const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 5MB');
+      toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 3MB');
       return;
     }
 
@@ -153,8 +156,8 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
 
       console.log('🔄 جاري معالجة الصورة...');
       
-      // محاولة الضغط أولاً
-      const compressedBase64 = await compressImageUniversal(file, 800, 800);
+      // استخدام أبعاد أصغر للضغط
+      const compressedBase64 = await compressImageUniversal(file, 500, 500);
       
       // تنظيف معاينة URL المؤقتة
       URL.revokeObjectURL(previewUrl);
@@ -165,7 +168,18 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       const compressedSize = Math.round((compressedBase64.length * 3) / 4 / 1024);
       console.log(`📊 حجم الصورة بعد الضغط: ${compressedSize}KB`);
       
-      toast.success(`تم تحميل الصورة بنجاح (${compressedSize}KB)`);
+      if (compressedSize > 300) {
+        // إذا كانت الصورة لا تزال كبيرة، حاول بضغط أقوى
+        toast.warning('جاري ضغط الصورة أكثر...');
+        const moreCompressed = await compressImageUniversal(file, 400, 400);
+        setImagePreview(moreCompressed);
+        setImageBase64(moreCompressed);
+        
+        const newSize = Math.round((moreCompressed.length * 3) / 4 / 1024);
+        toast.success(`تم تحميل الصورة بنجاح (${newSize}KB)`);
+      } else {
+        toast.success(`تم تحميل الصورة بنجاح (${compressedSize}KB)`);
+      }
     } catch (error) {
       console.error('❌ خطأ في معالجة الصورة:', error);
       
@@ -177,7 +191,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         const base64 = e.target.result;
         const fileSize = Math.round((base64.length * 3) / 4 / 1024);
         
-        if (fileSize > 3000) {
+        if (fileSize > 800) {
           toast.error('حجم الصورة كبير جداً. يرجى اختيار صورة أخرى');
           setImagePreview('');
           setImageBase64('');
@@ -226,7 +240,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
       const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
       const fileSizeInKB = (base64Data.length * 3) / 4 / 1024;
       
-      if (fileSizeInKB > 2000) {
+      if (fileSizeInKB > 500) {
         toast.error('حجم الصورة كبير جداً بعد المعالجة. يرجى اختيار صورة أخرى');
         return;
       }
@@ -281,6 +295,9 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 <p className="text-sm text-gray-500 mt-2">
                   {imagePreview ? 'معاينة الصورة الجديدة' : 'الصورة الحالية'}
                 </p>
+                {editingProduct && editingProduct.image && editingProduct.image.includes('cloudinary') && (
+                  <p className="text-xs text-green-600 mt-1">✓ الصورة مخزنة في السحابة</p>
+                )}
               </div>
             )}
 
@@ -296,10 +313,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
               />
               <p className="text-xs text-gray-500 mt-1">
-                اختر صورة من الجهاز - أقصى حجم 5MB
-                {editingProduct && editingProduct.image && (
-                  <span className="block text-green-600">✓ الصورة الحالية مخزنة في السحابة</span>
-                )}
+                اختر صورة من الجهاز - أقصى حجم 3MB
               </p>
               
               {imageLoading && (
@@ -458,7 +472,8 @@ const ProductsManagement = () => {
         price: formData.price,
         stock: formData.stock,
         bestseller: formData.bestseller,
-        hasNewImage: !!imageBase64
+        hasNewImage: !!imageBase64,
+        imageSize: imageBase64 ? Math.round(imageBase64.length / 1024) + 'KB' : 'No image'
       });
 
       if (editingProduct) {
@@ -490,8 +505,10 @@ const ProductsManagement = () => {
       let errorMessage = err.message;
       if (err.message.includes('Cloudinary') || err.message.includes('رفع الصورة')) {
         errorMessage = 'فشل في رفع الصورة. يرجى المحاولة مرة أخرى';
-      } else if (err.message.includes('5MB')) {
-        errorMessage = 'حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 5MB';
+      } else if (err.message.includes('5MB') || err.message.includes('حجم الصورة')) {
+        errorMessage = 'حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 3MB';
+      } else if (err.message.includes('413') || err.message.includes('Payload Too Large')) {
+        errorMessage = 'حجم الصورة كبير جداً. يرجى اختيار صورة أصغر';
       } else if (err.message.includes('timed out')) {
         errorMessage = 'انتهت مهلة الاتصال. تحقق من اتصال الإنترنت وحاول مرة أخرى';
       }
@@ -637,6 +654,9 @@ const ProductsManagement = () => {
                 <div className="text-xs text-gray-500">
                   تم الإضافة: {new Date(product.createdAt).toLocaleDateString('ar-EG')}
                 </div>
+                {product.image && product.image.includes('cloudinary') && (
+                  <div className="text-xs text-green-600 mt-1">✓ مخزن في السحابة</div>
+                )}
               </div>
             </div>
           ))}

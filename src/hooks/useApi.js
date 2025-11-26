@@ -4,7 +4,9 @@ import axios from 'axios';
 // إنشاء instance من axios موجه للباك إند
 const api = axios.create({
   baseURL: 'https://ghalya-back-end.vercel.app/api',
-  timeout: 30000 // زيادة المهلة للهواتف
+  timeout: 45000, // زيادة المهلة إلى 45 ثانية
+  maxContentLength: 10 * 1024 * 1024, // 10MB
+  maxBodyLength: 10 * 1024 * 1024, // 10MB
 });
 
 const useApi = () => {
@@ -59,16 +61,17 @@ const useApi = () => {
         errorMessage = 'انتهت مهلة الطلب. تحقق من اتصال الإنترنت.';
       } else if (err.message.includes('Network Error')) {
         errorMessage = 'فشل في الاتصال بالخادم. تحقق من اتصال الإنترنت.';
-      }
-      
-      setError(errorMessage);
-      
-      if (err.response?.status === 401) {
+      } else if (err.response?.status === 413) {
+        errorMessage = 'حجم الصورة كبير جداً. يرجى اختيار صورة أصغر.';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.';
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminAuth');
         localStorage.removeItem('adminUser');
         window.location.href = '/login';
       }
+      
+      setError(errorMessage);
       
       throw new Error(errorMessage);
     } finally {
