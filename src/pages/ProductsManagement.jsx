@@ -81,9 +81,15 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // التحقق من البيانات المطلوبة
+    if (!formData.name || !formData.price || !formData.stock) {
+      toast.error('الرجاء ملء جميع الحقول المطلوبة');
+      return;
+    }
+
     // التحقق من وجود صورة للمنتج الجديد
     if (!editingProduct && !imageFile) {
-      toast.error('الصورة مطلوبة');
+      toast.error('الصورة مطلوبة للمنتج الجديد');
       return;
     }
 
@@ -138,7 +144,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
             {/* حقل رفع الصورة */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {editingProduct ? 'تغيير صورة المنتج' : 'صورة المنتج *'}
+                {editingProduct ? 'تغيير صورة المنتج (اختياري)' : 'صورة المنتج *'}
               </label>
               <input
                 type="file"
@@ -147,7 +153,7 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
               />
               <p className="text-xs text-gray-500 mt-1">
-                يدعم الصور بحجم أقل من 5MB
+                يدعم الصور بحجم أقل من 5MB (JPEG, PNG, WebP)
               </p>
             </div>
 
@@ -282,28 +288,34 @@ const ProductsManagement = () => {
     setFormLoading(true);
 
     try {
-      // التحقق من الحقول المطلوبة
-      if (!formData.name || !formData.price || !formData.stock) {
-        toast.error('الرجاء ملء جميع الحقول المطلوبة');
-        setFormLoading(false);
-        return;
-      }
+      console.log('📤 بدء إرسال بيانات المنتج...');
 
       // إنشاء FormData لإرسال البيانات
       const submitData = new FormData();
       submitData.append('name', formData.name);
-      submitData.append('description', formData.description);
-      submitData.append('price', parseFloat(formData.price));
-      submitData.append('stock', parseInt(formData.stock));
+      submitData.append('description', formData.description || '');
+      submitData.append('price', formData.price);
+      submitData.append('stock', formData.stock);
       submitData.append('bestseller', formData.bestseller);
 
       // إضافة الصورة إذا كانت موجودة
       if (imageFile) {
         submitData.append('image', imageFile);
+        console.log('🖼️ تم إضافة الصورة:', imageFile.name, imageFile.size);
       }
+
+      console.log('📋 البيانات المرسلة:', {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        stock: formData.stock,
+        bestseller: formData.bestseller,
+        hasImage: !!imageFile
+      });
 
       if (editingProduct) {
         // تحديث المنتج الموجود
+        console.log('🔄 جاري تحديث المنتج:', editingProduct._id);
         const updatedProduct = await updateProduct(editingProduct._id, submitData);
         
         setProducts(prev => 
@@ -314,6 +326,7 @@ const ProductsManagement = () => {
         toast.success('تم تحديث المنتج بنجاح');
       } else {
         // إنشاء منتج جديد
+        console.log('🆕 جاري إنشاء منتج جديد');
         const newProduct = await createProduct(submitData);
         
         setProducts(prev => [newProduct, ...prev]);
@@ -323,8 +336,8 @@ const ProductsManagement = () => {
       setShowForm(false);
       setEditingProduct(null);
     } catch (err) {
-      console.error('Error saving product:', err);
-      toast.error(editingProduct ? 'فشل في تحديث المنتج' : 'فشل في إضافة المنتج');
+      console.error('🔴 Error saving product:', err);
+      toast.error(err.message || (editingProduct ? 'فشل في تحديث المنتج' : 'فشل في إضافة المنتج'));
     } finally {
       setFormLoading(false);
     }
@@ -415,7 +428,7 @@ const ProductsManagement = () => {
                   alt={product.name}
                   className="w-full h-48 object-cover"
                   onError={(e) => {
-                    e.target.src = '/api/placeholder/300/200'; // صورة افتراضية في حالة الخطأ
+                    e.target.src = 'https://via.placeholder.com/300x200?text=صورة+غير+متوفرة';
                   }}
                 />
                 {product.bestseller && (
