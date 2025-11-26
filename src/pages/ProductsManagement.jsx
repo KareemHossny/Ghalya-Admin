@@ -8,10 +8,11 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     name: '',
     description: '',
     price: '',
-    image: '',
     stock: '',
     bestseller: false
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
 
   // Reset form when editingProduct changes
   useEffect(() => {
@@ -20,19 +21,21 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
         name: editingProduct.name,
         description: editingProduct.description || '',
         price: editingProduct.price.toString(),
-        image: editingProduct.image || '',
         stock: editingProduct.stock.toString(),
         bestseller: editingProduct.bestseller || false
       });
+      setImagePreview(editingProduct.image || '');
+      setImageFile(null);
     } else {
       setFormData({
         name: '',
         description: '',
         price: '',
-        image: '',
         stock: '',
         bestseller: false
       });
+      setImagePreview('');
+      setImageFile(null);
     }
   }, [editingProduct]);
 
@@ -44,9 +47,47 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // التحقق من نوع الملف
+      if (!file.type.startsWith('image/')) {
+        toast.error('يجب اختيار ملف صورة فقط');
+        return;
+      }
+
+      // التحقق من حجم الملف (5MB كحد أقصى)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('حجم الصورة يجب أن يكون أقل من 5MB');
+        return;
+      }
+
+      setImageFile(file);
+      
+      // إنشاء معاينة للصورة
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // التحقق من وجود صورة للمنتج الجديد
+    if (!editingProduct && !imageFile) {
+      toast.error('الصورة مطلوبة');
+      return;
+    }
+
+    onSubmit(formData, imageFile);
   };
 
   if (!show) return null;
@@ -71,6 +112,45 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* معاينة الصورة */}
+            {(imagePreview || (editingProduct && editingProduct.image)) && (
+              <div className="text-center">
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview || editingProduct.image}
+                    alt="معاينة الصورة"
+                    className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">معاينة الصورة</p>
+              </div>
+            )}
+
+            {/* حقل رفع الصورة */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {editingProduct ? 'تغيير صورة المنتج' : 'صورة المنتج *'}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                يدعم الصور بحجم أقل من 5MB
+              </p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 اسم المنتج *
@@ -130,19 +210,6 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
                   required
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                صورة المنتج (رابط URL)
-              </label>
-              <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              />
             </div>
 
             <div className="flex items-center">
@@ -211,24 +278,33 @@ const ProductsManagement = () => {
     }
   };
 
-  const handleFormSubmit = async (formData) => {
+  const handleFormSubmit = async (formData, imageFile) => {
     setFormLoading(true);
 
     try {
-      // Validate required fields
+      // التحقق من الحقول المطلوبة
       if (!formData.name || !formData.price || !formData.stock) {
         toast.error('الرجاء ملء جميع الحقول المطلوبة');
         setFormLoading(false);
         return;
       }
 
+      // إنشاء FormData لإرسال البيانات
+      const submitData = new FormData();
+      submitData.append('name', formData.name);
+      submitData.append('description', formData.description);
+      submitData.append('price', parseFloat(formData.price));
+      submitData.append('stock', parseInt(formData.stock));
+      submitData.append('bestseller', formData.bestseller);
+
+      // إضافة الصورة إذا كانت موجودة
+      if (imageFile) {
+        submitData.append('image', imageFile);
+      }
+
       if (editingProduct) {
-        // Update existing product
-        const updatedProduct = await updateProduct(editingProduct._id, {
-          ...formData,
-          price: parseFloat(formData.price),
-          stock: parseInt(formData.stock)
-        });
+        // تحديث المنتج الموجود
+        const updatedProduct = await updateProduct(editingProduct._id, submitData);
         
         setProducts(prev => 
           prev.map(product => 
@@ -237,12 +313,8 @@ const ProductsManagement = () => {
         );
         toast.success('تم تحديث المنتج بنجاح');
       } else {
-        // Create new product
-        const newProduct = await createProduct({
-          ...formData,
-          price: parseFloat(formData.price),
-          stock: parseInt(formData.stock)
-        });
+        // إنشاء منتج جديد
+        const newProduct = await createProduct(submitData);
         
         setProducts(prev => [newProduct, ...prev]);
         toast.success('تم إضافة المنتج بنجاح');
@@ -342,6 +414,9 @@ const ProductsManagement = () => {
                   src={product.image}
                   alt={product.name}
                   className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    e.target.src = '/api/placeholder/300/200'; // صورة افتراضية في حالة الخطأ
+                  }}
                 />
                 {product.bestseller && (
                   <span className="absolute top-3 left-3 bg-pink-600 text-white px-2 py-1 rounded-full text-xs font-medium">

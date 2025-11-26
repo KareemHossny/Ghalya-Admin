@@ -5,19 +5,18 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: 'https://ghalya-back-end.vercel.app/api',
   timeout: 10000
-  // تم إزالة withCredentials: true
 });
 
 const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // إعداد المصادقة باستخدام JWT
-  const setupAuth = (config = {}) => {
+  // إعداد المصادقة مع دعم FormData
+  const setupAuth = (config = {}, isFormData = false) => {
     const token = localStorage.getItem('adminToken');
     
     const headers = {
-      'Content-Type': 'application/json',
+      ...(!isFormData && { 'Content-Type': 'application/json' }),
       ...config.headers
     };
     
@@ -75,11 +74,17 @@ const useApi = () => {
   const getProducts = useCallback(() => 
     callApi(() => api.get('/admin/products', setupAuth())), [callApi]);
 
-  const createProduct = useCallback((productData) => 
-    callApi(() => api.post('/admin/products', productData, setupAuth()), 'تم إضافة المنتج بنجاح'), [callApi]);
+  // تعديل createProduct لدعم FormData
+  const createProduct = useCallback((productData) => {
+    const isFormData = productData instanceof FormData;
+    return callApi(() => api.post('/admin/products', productData, setupAuth({}, isFormData)), 'تم إضافة المنتج بنجاح');
+  }, [callApi]);
 
-  const updateProduct = useCallback((id, productData) => 
-    callApi(() => api.put(`/admin/products/${id}`, productData, setupAuth()), 'تم تحديث المنتج بنجاح'), [callApi]);
+  // تعديل updateProduct لدعم FormData
+  const updateProduct = useCallback((id, productData) => {
+    const isFormData = productData instanceof FormData;
+    return callApi(() => api.put(`/admin/products/${id}`, productData, setupAuth({}, isFormData)), 'تم تحديث المنتج بنجاح');
+  }, [callApi]);
 
   const deleteProduct = useCallback((id) => 
     callApi(() => api.delete(`/admin/products/${id}`, setupAuth()), 'تم حذف المنتج بنجاح'), [callApi]);
