@@ -29,9 +29,8 @@ const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.7) => 
       canvas.width = width;
       canvas.height = height;
 
-      // تدوير الصورة بناءً على بيانات EXIF
-      const orientation = getImageOrientation(file);
-      applyImageOrientation(ctx, img, orientation, width, height);
+      // رسم الصورة على Canvas
+      ctx.drawImage(img, 0, 0, width, height);
 
       // تحويل إلى Base64
       const base64 = canvas.toDataURL('image/jpeg', quality);
@@ -41,42 +40,6 @@ const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.7) => 
     img.onerror = function() {
       reject(new Error('فشل في تحميل الصورة'));
     };
-
-    // قراءة بيانات EXIF للتدوير
-    function getImageOrientation(file) {
-      // في المتصفحات الحديثة، يمكن استخدام EXIF.js لمزيد من الدقة
-      // هنا نستخدم طريقة مبسطة
-      return 1; // القيمة الافتراضية
-    }
-
-    function applyImageOrientation(ctx, img, orientation, width, height) {
-      switch (orientation) {
-        case 2:
-          ctx.transform(-1, 0, 0, 1, width, 0);
-          break;
-        case 3:
-          ctx.transform(-1, 0, 0, -1, width, height);
-          break;
-        case 4:
-          ctx.transform(1, 0, 0, -1, 0, height);
-          break;
-        case 5:
-          ctx.transform(0, 1, 1, 0, 0, 0);
-          break;
-        case 6:
-          ctx.transform(0, 1, -1, 0, height, 0);
-          break;
-        case 7:
-          ctx.transform(0, -1, -1, 0, height, width);
-          break;
-        case 8:
-          ctx.transform(0, -1, 1, 0, 0, width);
-          break;
-        default:
-          ctx.drawImage(img, 0, 0, width, height);
-          break;
-      }
-    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -137,7 +100,8 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
     if (!file) return;
 
     // التحقق من نوع الملف
-    if (!file.type.startsWith('image/')) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
       toast.error('يجب اختيار ملف صورة فقط (JPEG, PNG, WebP)');
       return;
     }
@@ -187,6 +151,9 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
   const removeImage = () => {
     setImagePreview('');
     setImageBase64('');
+    // إعادة تعيين حقل الإدخال
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = '';
   };
 
   const handleSubmit = (e) => {
@@ -259,13 +226,12 @@ const ProductForm = ({ show, onClose, onSubmit, editingProduct, loading }) => {
               </label>
               <input
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.webp"
                 onChange={handleImageChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
-                capture="environment" // للهواتف - يفتح الكاميرا مباشرة
               />
               <p className="text-xs text-gray-500 mt-1">
-                يمكنك التقاط صورة أو اختيار من المعرض. يدعم حتى 10MB
+                اختر صورة من الجهاز (JPEG, PNG, WebP) - أقصى حجم 10MB
               </p>
               
               {imageLoading && (
