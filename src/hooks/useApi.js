@@ -4,7 +4,7 @@ import axios from 'axios';
 // إنشاء instance من axios موجه للباك إند
 const api = axios.create({
   baseURL: 'https://ghalya-back-end.vercel.app/api',
-  timeout: 10000
+  timeout: 30000
 });
 
 const useApi = () => {
